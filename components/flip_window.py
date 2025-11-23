@@ -1,54 +1,268 @@
-import math
-import sys
-import pyqtgraph as pg
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QPainter, QTransform
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QSlider,
-                             QApplication, QMainWindow)
+import os
 
-from python.clock.components.g import SimpleGraph
+from PyQt5.QtCore import Qt, QEasingCurve, QRect
+from PyQt5.QtGui import QPainter, QTransform, QFont
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+
+class SlideHintArea(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setGeometry(0, 0, 300, 40)
+        self.label = QLabel(self)
+        self.hover = False
+        self.timer = QTimer()
+        self.timer.setInterval(200)
+        self.timer.timeout.connect(self.update_label)
+        self.counter = 1
+
+        self.label.setGeometry(120, 0, 60, 40)
+        font = QFont("HYWenHei", 18)
+        font.setBold(False)
+        self.label.setFont(font)
+        self.label.setStyleSheet("""
+                        QLabel {
+                    padding: 0px;
+                    color: #808080;
+                    background-color: transparent;
+                }
+                        """)
+
+    def stop_flash(self):
+        self.hover = False
+        self.timer.stop()
+        self.label.setText("")
+        self.counter = 1
+
+    def update_label(self):
+        if self.counter <= 3:
+            self.label.setText(self.counter * ">")
+            self.counter += 1
+        else:
+            self.label.setText("")
+            self.counter = 1
+        self.update()
+        self.timer.start()
+
+    def enterEvent(self, event):
+        if not self.hover:
+            self.hover = True
+            self.update_label()
+
+    def leaveEvent(self, event):
+        self.hover = False
+        self.timer.stop()
+        self.label.setText("")
+        self.counter = 1
+
+from PyQt5.QtCore import QTimer, QPropertyAnimation, pyqtProperty
+
+class MarqueeLabel(QLabel):
+    def __init__(self, text):
+        super().__init__(text)
+        self.original_text = text
+        self.current_position = 0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_text)
+        self.animation_speed = 300  # ms
+        self.is_marquee_active = False
+        self.setText(text)
+
+    def setText(self, text):
+        super().setText(text)
+        self.original_text = text
+        self.check_marquee_needed()
+
+    def check_marquee_needed(self):
+        """Проверяет, нужен ли эффект бегущей строки"""
+        if len(self.original_text) > 26:
+            if not self.is_marquee_active:
+               self.start_marquee()
+        else:
+            self.stop_marquee()
+
+    def start_marquee(self):
+        """Запускает эффект бегущей строки"""
+        self.is_marquee_active = True
+        self.current_position = 0
+        self.timer.start(self.animation_speed)
+
+    def stop_marquee(self):
+        """Останавливает эффект бегущей строки"""
+        self.is_marquee_active = False
+        self.timer.stop()
+        self.current_position = 0
+
+    def update_text(self):
+        """Обновляет текст для эффекта бегущей строки"""
+        if len(self.original_text) <= 26:
+            self.stop_marquee()
+            return
+
+        # Двигаем позицию
+        self.current_position += 1
+
+        # Если осталось 17 символов, начинаем сначала
+        if self.current_position > len(self.original_text) - 17:
+            self.current_position = 0
+
+        # Обрезаем текст
+        display_text = self.original_text[self.current_position:]
+
+        # Обрезаем до максимальной длины
+        display_text = display_text[:26]
+        super().setText(display_text)
+
 
 
 class FlipCard(QWidget):
-    def __init__(self, front_items, back_items, label, parent=None):
-        super().__init__(parent)
+    def __init__(self,font_color):
+        super().__init__()
+        self.current_label = None
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.back_widget = None
+        self.front_widget = None
         self.start_angle = None
         self.press = False
+        self.font_color =font_color
         self.drag_pos = None
-        self.label = label
-        self.is_flipped = False
-
         self.card_width = 300
         self.card_height = 450
+        self._rotation_angle = 0
+        self.setFixedSize(self.card_width, self.card_height + 80)
+        self.setStyleSheet("""
+                                         QWidget{
+                                        background-color: transparent;
+                                        border: none;
+                                        padding: 0px;
+                                        }
+                                        """)
 
+        # Контейнер для контента (будет вращаться)
+        self.content_widget = QWidget()
+        self.content_widget.setAttribute(Qt.WA_StyledBackground, True)
+        self.content_widget.setStyleSheet("""
+                         QWidget{
+                        background-color:transparent;
+                        border: none;
+                        }
+                        """)
 
-        self.front_items = front_items
-        self.back_items = back_items
-        self.rotation_angle = 0
+        self.trigger_widget = SlideHintArea()
+        self.trigger_widget.setParent(self)
 
-        self.setFixedSize(self.card_width, self.card_height+80)
-        self.setup_ui()
+        self.animation = QPropertyAnimation(self, b"rotation_angle")
+        self.animation.setDuration(700)
+        self.animation.setEasingCurve(QEasingCurve.OutBounce)
 
-        self.bounce_timer = QTimer()
-        self.bounce_timer.timeout.connect(self.update_rotation_angle)
-        self.bounce_values = []
-        self.bounce_pointer=0
+        self.song_list = ["тут",
+                          "будут",
+                          "песенки",
+                          ":)",
+                        ]
+
+        self.back_widget = QWidget()
+        self.back_widget.setGeometry(2, 40, self.card_width-4, 450)
+        self.back_widget.setStyleSheet("""
+                 QWidget{
+                    background-color: #transparent;
+                    border-radius: 25px; 
+                    border: 1px solid #808080;
+                    }
+                """)
+
+        self.history_layout = QVBoxLayout(self.back_widget)
+        self.history_layout.setAlignment(Qt.AlignTop)
+        self.history_layout.setSpacing(10)
+        self.history_layout.setContentsMargins(10, 40, 0, 20)
+        self.update_song_history("тут", self.song_list)
+        self.history_layout.addStretch()
+
+    def update_song_history(self, current_song, song_list):
+        while self.history_layout.count():
+            child = self.history_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+        for i, song in enumerate(song_list):
+            song_name = "  "+str(os.path.basename(song).replace(".mp3", "").replace(".wav", ""))
+
+            song_text = QLabel(song_name)
+            if song==current_song:
+                song_text = MarqueeLabel(song_name)
+                song_text.setStyleSheet(f"""
+                         QLabel{{
+                            color: {self.font_color};
+                            font-weight: bold;
+                            font-size: 20px;
+                            font-family: 'Sans Serif';
+                            border: none;
+                            background-color: transparent;
+                        }}
+                """)
+                self.current_label = song_text
+            else:
+                song_text.setStyleSheet("""
+                                             QLabel{
+                                                color: #999999;
+                                                font-size: 20px;
+                                                font-weight: light;
+                                                font-family: 'Sans Serif'; 
+                                                border: none;
+                                                background-color: transparent;
+                                            }
+                                    """)
+            self.history_layout.addWidget(song_text)
+
+    def set_font_color(self, font_color):
+        self.font_color=font_color
+        self.current_label.setStyleSheet(f"""
+                                 QLabel{{
+                                    color:{font_color};
+                                    font-weight: bold;
+                                    font-size: 20px;
+                                    font-family: 'Sans Serif'; 
+                                    border: none;
+                                    background-color: transparent;
+                                }}
+                        """)
+
+    def set_front_widget(self, front_widget):
+        self.front_widget = front_widget
+        self.front_widget.setGeometry(0, 40, self.card_width, 450)
+        self.front_widget.setParent(self)
+        self.back_widget.setParent(self)
+
+    def get_rotation_angle(self):
+        return self._rotation_angle
+
+    def set_rotation_angle(self, angle):
+        self._rotation_angle = angle % 360
+        self.update()  # Перерисовываем при изменении угла
+
+    # Кастомное property для анимации
+    rotation_angle = pyqtProperty(float, get_rotation_angle, set_rotation_angle)
 
     def mousePressEvent(self, event):
-        self.press = True
         if event.button() == Qt.LeftButton:
             self.drag_pos = event.pos()
-            self.start_angle = self.rotation_angle  # Сохраняем начальный угол
-        self.update()
+            track_area = QRect(0, 0, 300, 50)
+            if track_area.contains(self.drag_pos):
+                self.trigger_widget.stop_flash()
+                self.press = True
+                self.start_angle = self._rotation_angle  # Сохраняем начальный угол
+                self.update()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.MouseButton.LeftButton:
-            if self.drag_pos is not None:
+            track_area = QRect(0, 0, 300, 50)
+            if track_area.contains(self.drag_pos):
                 delta_x = event.pos().x() - self.drag_pos.x()
                 # Вычисляем новый угол относительно начального
-                self.rotation_angle = self.start_angle - delta_x
+                self._rotation_angle = self.start_angle - delta_x
                 self.update()
+            else:
+                super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if self.press:
@@ -57,232 +271,61 @@ class FlipCard(QWidget):
 
             if event.button() == Qt.LeftButton:
                 normalized_angle = self.rotation_angle % 360
-                if 0 <= normalized_angle <= 90 or normalized_angle >= 270:
-                    self.rotation_angle = round(self.rotation_angle / 360) * 360
-                elif 90 < normalized_angle < 270:
-                    self.rotation_angle = round(self.rotation_angle / 360) * 360 + 180
-                self.bounce_values = self.get_bounce_values()
-                self.draw_graph(list(range(1, len(self.bounce_values)+1)), self.bounce_values)
+                self.animation.setStartValue(normalized_angle)
 
-                self.bounce_timer.start(5)
+                if 0 <= normalized_angle < 90:
+                    self.animation.setEndValue(0)
+
+                elif 90 <= normalized_angle < 180:
+                    self.animation.setEndValue(180)
+
+                elif 180 <= normalized_angle < 270:
+                    self.animation.setEndValue(180)
+
+                elif 270 <= normalized_angle < 360:
+                    self.animation.setEndValue(360)
+
+            self.animation.start()
             self.update()
-            super().mouseReleaseEvent(event)
-
-    def draw_graph(self, x, y):
-        self.graph = QMainWindow()
-        self.graph.setGeometry(2500, 400, 600, 400)
-        # Создаем виджет для построения графика
-        self.plot_graph = pg.PlotWidget()
-        # Устанавливаем белый фон
-        self.plot_graph.setBackground("w")
-        x_axis = self.plot_graph.getAxis('bottom')
-        y_axis = self.plot_graph.getAxis('left')
-
-        # Устанавливаем черный цвет для линий сетки
-        x_axis.setGrid(255)  # 255 соответствует черному цвету в HEX #000000
-        y_axis.setGrid(255)
-        # Создаем красную линию толщиной 2 пикселя
-        pen = pg.mkPen(color=(255, 0, 0), width=2)
-        # Рисуем график
-        self.plot_graph.plot(x, y, pen=pen)
-        self.graph.setCentralWidget(self.plot_graph)
-        self.graph.show()
-
-    def get_bounce_values(self, steps=30):
-        """
-        Плавный bounce-эффект с 5 скачками с убывающей амплитудой
-        но одинаковыми пиками внутри каждого скачка
-        """
-        values = []
-
-        # Амплитуды для каждого из 5 скачков
-        amplitudes = [10, 8, 6, 4, 2]
-
-        for i in range(steps):
-            t = i / steps
-            value = 0
-
-            # Создаем 5 отдельных скачков
-            for j, amp in enumerate(amplitudes):
-                # Сдвигаем каждый следующий скачок по времени
-                phase_shift = j * 0.15  # сдвиг фазы для разделения скачков
-                freq_factor = 8 + j * 2  # увеличиваем частоту для более резких скачков
-
-                # Затухающая огибающая для плавности
-                envelope = math.exp(-3 * (t - phase_shift)) if t >= phase_shift else 0
-
-                # Синусоида для скачка
-                bounce = amp * math.sin(freq_factor * math.pi * (t - phase_shift)) * envelope
-                value += bounce
-
-            values.append(round(value, 3))
-
-        return values
-
-    def setup_ui(self):
-        # Основной layout для карточки
-        self.main_layout = QVBoxLayout(self)
-        self.main_layout.setAlignment(Qt.AlignCenter)
-
-        # Контейнер для контента (будет вращаться)
-        self.content_widget = QWidget()
-        self.content_widget.setStyleSheet("""
-                            background-color: #333333;
-                       """)
-        self.content_widget.setFixedSize(self.card_width, 600)
-
-        # Front side (лицевая сторона)
-        self.front_widget = self.create_side_widget(self.front_items, "Лицевая сторона", "#E3F2FD")
-        self.front_widget.setParent(self.content_widget)
-
-        # Back side (обратная сторона)
-        self.back_widget = self.create_side_widget(self.back_items, "Обратная сторона", "#FFF3E0")
-        self.back_widget.setParent(self.content_widget)
-
-    def update_rotation_angle(self):
-
-        if self.bounce_pointer>=len(self.bounce_values):
-            self.bounce_timer.stop()
-            self.bounce_pointer = 0
-
-        else:
-            self.rotation_angle = self.rotation_angle + self.bounce_values[self.bounce_pointer]
-            self.bounce_pointer+=1
-
-        self.update()
+        super().mouseMoveEvent(event)
 
 
-    def create_side_widget(self, items, title, color):
-        widget = QWidget()
-        widget.setGeometry(0, 40, self.card_width, 450)
-        widget.setStyleSheet(f"""
-            background-color: {color}; 
-            border-radius: 15px; 
-            border: 2px solid #000000;
-        """)
 
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(20, 20, 20, 20)
 
-        # Заголовок стороны
-        title_label = QLabel(title)
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setFont(QFont("Arial", 16, QFont.Bold))
-        title_label.setStyleSheet("color: #2E2E2E; margin-bottom: 20px;")
-        layout.addWidget(title_label)
-
-        # Список пунктов
-        for i, item in enumerate(items, 1):
-            item_label = QLabel(f"{i}. {item}")
-            item_label.setFont(QFont("Arial", 12))
-            item_label.setStyleSheet("""
-                QLabel {
-                    background-color: rgba(255,255,255,0.7);
-                    border: 1px solid #DDD;
-                    border-radius: 8px;
-                    padding: 10px;
-                    margin: 4px;
-                }
-            """)
-            item_label.setMinimumHeight(35)
-            item_label.setWordWrap(True)
-            layout.addWidget(item_label)
-
-        layout.addStretch()
-        return widget
-
-    def set_rotation(self, angle):
-        """Устанавливает угол вращения (0-360 градусов)"""
-        self.rotation_angle = angle
-        self.update()  # Перерисовываем
 
     def paintEvent(self, event):
         painter = QPainter(self)
-
         # Нормализуем угол в диапазон 0-360 градусов
-        self.normalized_angle = self.rotation_angle % 360
+        normalized_angle = self.rotation_angle % 360
 
-        # Применяем трансформацию вращения вокруг оси Y
-        transform = QTransform()
-        transform.translate(self.width() / 2, self.height() / 2)
-        transform.rotate(self.normalized_angle, Qt.YAxis)
-
-        # Определяем, какая сторона видна (используем self.normalized_angle)
-        # Если угол между 90° и 270° - показываем обратную сторону
-        if 90 < self.normalized_angle < 270:
-            transform.scale(-1, 1)  # Отражение по вертикали
-            self.front_widget.hide()
-            self.back_widget.show()
-        else:
+        # Если карточка не вращается (угол 0° или 180°) - показываем реальные виджеты
+        if normalized_angle == 0:
+            # Показываем реальные виджеты для интерактивности
+            self.front_widget.setParent(self)
             self.front_widget.show()
             self.back_widget.hide()
+        elif normalized_angle == 180:
+            self.front_widget.hide()
+            self.back_widget.setParent(self)
+            self.back_widget.show()
+        else:
+            # Применяем трансформацию вращения вокруг оси Y
+            transform = QTransform()
+            transform.translate(self.width() / 2, self.height() / 2)
+            transform.rotate(normalized_angle, Qt.YAxis)
 
-        transform.translate(-self.width() / 2, -self.height() / 2)
-        painter.setTransform(transform)
+            if 90 < normalized_angle < 270:
+                transform.scale(-1, 1)
+                self.back_widget.setParent(self.content_widget)
+                self.back_widget.show()
+                self.front_widget.hide()
+            else:
+                self.front_widget.setParent(self.content_widget)
+                self.front_widget.show()
+                self.back_widget.hide()
 
-        # Отрисовываем контент
-        self.content_widget.render(painter, self.content_widget.pos())
-        self.label.setText(f"Угол вращения: {int(self.rotation_angle)}° (норм: {int(self.normalized_angle)}°)")
+            transform.translate(-self.width() / 2, -self.height() / 2)
+            painter.setTransform(transform)
 
-
-class MainWindow(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.X11BypassWindowManagerHint)
-        self.setGeometry(1900, 400, 400, 780)
-        layout = QVBoxLayout(self)
-        layout.setSpacing(0)
-
-        # Данные для сторон
-        front_items = [
-            "История воспроизведения треков",
-            "Текущий плейлист",
-            "Настройки звука",
-            "Статистика прослушивания",
-            "Избранные композиции"
-        ]
-
-        back_items = [
-            "Громкость: 75%",
-            "Повтор: Вкл",
-            "Случайный порядок: Выкл",
-            "Эквалайзер: Поп",
-            "Автопауза: 30 мин",
-            "Качество: Высокое"
-        ]
-
-        # Слайдер для управления вращением
-        slider_layout = QVBoxLayout()
-
-        slider_label = QLabel("Угол вращения: 0°")
-        slider_label.setAlignment(Qt.AlignCenter)
-        slider_label.setFont(QFont("Arial", 12, QFont.Bold))
-        slider_layout.addWidget(slider_label)
-
-        self.rotation_slider = QSlider(Qt.Horizontal)
-        self.rotation_slider.setRange(0, 360)
-        self.rotation_slider.setValue(0)
-        self.rotation_slider.setTickPosition(QSlider.TicksBelow)
-        self.rotation_slider.setTickInterval(45)
-        self.rotation_slider.valueChanged.connect(lambda value: (
-            self.flip_card.set_rotation(value),
-            slider_label.setText(f"Угол вращения: {value}°")
-        ))
-        slider_layout.addWidget(self.rotation_slider)
-
-        # Создаем карточку
-        self.flip_card = FlipCard(front_items, back_items, slider_label)
-        layout.addWidget(self.flip_card)
-
-        layout.addLayout(slider_layout)
-
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+            # Отрисовываем контент
+            self.content_widget.render(painter, self.content_widget.pos())

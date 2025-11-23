@@ -1,7 +1,9 @@
 import os
 import random
+from array import array
+
 import pygame.mixer
-from PyQt5.QtCore import QThread, QTimer
+from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -9,6 +11,7 @@ from components.utils import get_resource_path, check_exists, log_error
 
 
 class AudioPlayerThread(QThread):
+    update_song_history = pyqtSignal(str, list)
     def __init__(self):
         super().__init__()
         self.pointer_of_song_in_history = -1
@@ -117,6 +120,7 @@ class AudioPlayerThread(QThread):
                 else:
                     self.current_song = self.history[0]
                 self.play_track(self.current_song)
+                self.update_song_history.emit(self.current_song, self.get_context_songs(self.playlist, self.current_song ))
                 self.print_history()
 
             except Exception as e:
@@ -160,6 +164,8 @@ class AudioPlayerThread(QThread):
 
                 self.play_track(self.current_song)
                 self.pointer_of_song_in_history += 1
+                self.update_song_history.emit(self.current_song, self.get_context_songs(self.playlist, self.current_song ))
+
                 self.print_history()
 
             except Exception as e:
@@ -191,6 +197,23 @@ class AudioPlayerThread(QThread):
                 print(f"\033[90m  [{i:2d}] {song_name}\033[0m")
 
         print("\033[1;36m" + "─" * 50 + "\033[0m")
+
+    def get_context_songs(self, song_list, current_song):
+        if not song_list:
+            return []
+
+        try:
+            current_index = song_list.index(current_song)
+        except ValueError:
+            return song_list[:11]
+
+        if len(song_list) <= 11:
+            return song_list
+
+        # Вычисляем стартовый индекс
+        start_index = max(0, min(current_index - 5, len(song_list) - 11))
+        return song_list[start_index:start_index + 11]
+
 
     # ГЛАВНЫЙ МЕТОД PAUSE/PLAY
     def switch_play_pause(self):
