@@ -246,7 +246,7 @@ class FlipCard(QWidget):
         if event.button() == Qt.LeftButton:
             self.drag_pos = event.pos()
             track_area = QRect(0, 0, 300, 50)
-            if track_area.contains(self.drag_pos):
+            if self.drag_pos is not None and track_area.contains(self.drag_pos):
                 self.trigger_widget.stop_flash()
                 self.press = True
                 self.start_angle = self._rotation_angle  # Сохраняем начальный угол
@@ -256,7 +256,7 @@ class FlipCard(QWidget):
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.MouseButton.LeftButton:
             track_area = QRect(0, 0, 300, 50)
-            if track_area.contains(self.drag_pos):
+            if self.drag_pos is not None and track_area.contains(self.drag_pos):
                 delta_x = event.pos().x() - self.drag_pos.x()
                 # Вычисляем новый угол относительно начального
                 self._rotation_angle = self.start_angle - delta_x

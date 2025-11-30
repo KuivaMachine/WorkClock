@@ -1,9 +1,12 @@
+from distutils.log import fatal
 from pathlib import Path
 
 from PyQt5.QtCore import pyqtSignal, Qt
 
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QCheckBox, QWidget, QHBoxLayout
+
+from components.hint_window import HintWidget
 
 
 class Checkbox(QCheckBox):
@@ -36,8 +39,10 @@ class Checkbox(QCheckBox):
 
 class CheckboxWidget(QWidget):
     stateChanged = pyqtSignal(bool)
-    def __init__(self, icon, checked):
+    def __init__(self, root_window, hint_text, icon, checked):
         super().__init__()
+        self.hint_text=hint_text
+        self.root_window=root_window
         self.setAttribute(Qt.WA_StyledBackground, True)
         app_directory = Path(__file__).parent.parent  # Ищет родительский каталог проекта
         resource_path = app_directory / 'resources'
@@ -68,6 +73,13 @@ class CheckboxWidget(QWidget):
         lock_window_hbox.addWidget(self.lock_window_checkbox)
         lock_window_hbox.addWidget(lock_window_icon)
         lock_window_hbox.setSpacing(5)
+
+    def enterEvent(self, e):
+        self.hint = HintWidget(self.root_window, self.hint_text)
+        self.hint.show()
+
+    def leaveEvent(self, e):
+        self.hint.close()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:

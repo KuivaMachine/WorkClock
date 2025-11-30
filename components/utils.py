@@ -7,46 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 
-def enable_acrylic(widget):
-    # Получаем handle окна
-    hwnd = widget.winId().__int__()
-
-    # Настройки для эффекта Acrylic
-    accent_policy = (
-        3,  # ACCENT_ENABLE_ACRYLICBLURBEHIND
-        0,  # Flags
-        0x90202020,  # Color (в формате ARGB, здесь серый с прозрачностью)
-        0  # Animation ID
-    )
-
-    # Структура для передачи политики акцента
-    class AccentPolicy(ctypes.Structure):
-        _fields_ = [
-            ("AccentState", ctypes.c_uint),
-            ("AccentFlags", ctypes.c_uint),
-            ("GradientColor", ctypes.c_uint),
-            ("AnimationId", ctypes.c_uint)
-        ]
-
-    # Структура для передачи данных окну
-    class WindowCompositionAttributeData(ctypes.Structure):
-        _fields_ = [
-            ("Attribute", ctypes.c_int),
-            ("Data", ctypes.POINTER(AccentPolicy)),
-            ("SizeOfData", ctypes.c_size_t)
-        ]
-
-    accent = AccentPolicy(*accent_policy)
-    data = WindowCompositionAttributeData()
-    data.Attribute = 19  # WCA_ACCENT_POLICY
-    data.Data = ctypes.pointer(accent)
-    data.SizeOfData = ctypes.sizeof(accent)
-
-    # Загружаем библиотеку user32 и вызываем SetWindowCompositionAttribute
-    ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
-
-
-
 
 def lighten_color_subtract(hex_color, amount=40):
     """

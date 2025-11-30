@@ -70,6 +70,8 @@ class AudioPlayerThread(QThread):
         self.path_to_music = track_path
         if self.is_playing:
             self.stop_music()
+            pygame.mixer.music.unload()
+            self.playlist=[]
             self.play_music()
         else:
             self.is_first_play = True
@@ -83,7 +85,7 @@ class AudioPlayerThread(QThread):
         self.background_sound_player.setVolume(volume)
 
     def play_music(self):
-        audio_extensions = {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'}
+        audio_extensions = {'.mp3', '.wav'}
         self.is_playing = True
         self.off = False
         if not self.playlist and self.path_to_music:
