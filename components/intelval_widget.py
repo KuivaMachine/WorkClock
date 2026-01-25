@@ -61,6 +61,12 @@ class IntervalInputWidget(QWidget):
         interval_hbox.addWidget(self.interval_field)
         interval_hbox.addWidget(work_interval_icon)
 
+    def setStyle(self, style):
+        self.interval_field.setStyleSheet(style)
+
+    def setText(self, text):
+        self.interval_field.setText(text)
+
     def text(self):
         return self.interval_field.text()
 

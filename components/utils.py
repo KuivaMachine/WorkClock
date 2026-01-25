@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 
 
-
 def lighten_color_subtract(hex_color, amount=40):
     """
     Затемняет цвет вычитанием значения из каждого канала
@@ -84,7 +83,6 @@ def check_settings():
     file_path = appdata_dir / "settings.json"
     if not file_path.exists():
         with open(file_path, 'w', encoding='utf-8') as f:
-
             json.dump({
                 "x": "1500",
                 "y": "100",
@@ -93,10 +91,23 @@ def check_settings():
                 "music_path": "",
                 "random": False,
                 "background_color": "#333333",
-                "first_gradient_color": "#d1d1d1",
-                "second_gradient_color": "#2099ed",
+                "first_gradient_color": "#FB06AD",
+                "second_gradient_color": "#FF8C00",
                 "lock_window": True,
-                "background_transparency": "99"
+                "background_transparency": "99",
+                "current_color_scheme": 1,
+                "volume":50,
+                "scheme_1_first_color": "#FB06AD",
+                "scheme_1_second_color": "#FF8C00",
+                "scheme_2_first_color": "#72ffd8",
+                "scheme_2_second_color": "#052d0e",
+                "scheme_3_first_color": "#FF9900",
+                "scheme_3_second_color": "#573400",
+                "scheme_4_first_color": "#FF59F7",
+                "scheme_4_second_color": "#5E0C5A",
+                "scheme_5_first_color": "#659AFC",
+                "scheme_5_second_color": "#06245E",
+                "time_font": "PT Mono"
             }, f, indent=4)
 
 

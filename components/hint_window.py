@@ -13,7 +13,7 @@ class HintWidget(QLabel):
                                 QLabel{
                                 text-align:center;
                                 background-color: transparent;
-                                font-size:26px;
+                                font-size:22px;
                                 font-family: 'Stengazeta';
                                 color: #E6E6E6;
                                 }""")

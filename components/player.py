@@ -1,6 +1,7 @@
 import os
 import random
 from array import array
+from pathlib import Path
 
 import pygame.mixer
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
@@ -12,7 +13,7 @@ from components.utils import get_resource_path, check_exists, log_error
 
 class AudioPlayerThread(QThread):
     update_song_history = pyqtSignal(str, list)
-    def __init__(self):
+    def __init__(self, volume):
         super().__init__()
         self.pointer_of_song_in_history = -1
         self.is_first_play = True  # Флаг первого воспроизведения
@@ -20,7 +21,7 @@ class AudioPlayerThread(QThread):
         self.path_to_music = None  # Путь к дериктории с музыкой
         self.is_playing = False  # Флаг воспроизведения главной в данный момент
         self.is_background_playing = False  # Флаг воспроизведения фоновой музыки в данный момент
-        self.MAX_VOL = 0.2  # Максимальная громкость
+        self.CURRENT_VOLUME = volume  # громкость
         self.off = False  # Флаг тишины основной музыки
         self.current_song = None  # Индекс текущего трека
         self.playlist = []  # Список файлов для воспроизведения
@@ -37,6 +38,12 @@ class AudioPlayerThread(QThread):
         self.background_sound_player.stateChanged.connect(self.on_background_music_end)
         self.alarm_sound_player = QMediaPlayer()  # Плеер основной музыки
 
+    def set_volume(self, value):
+        if 0.0<=value<=1.0:
+            self.CURRENT_VOLUME = value
+            if not self.off:
+                pygame.mixer.music.set_volume(value)
+
     def switch_random(self, state):
         self.random = True if state else False
 
@@ -52,6 +59,7 @@ class AudioPlayerThread(QThread):
 
     def run(self):
         pygame.mixer.init()
+
         self.alarm_sound_player.setMedia(QMediaContent(QUrl.fromLocalFile(get_resource_path("music/alarm.wav"))))
         self.alarm_sound_player.setVolume(11)
         self.background_sound_player.setMedia(QMediaContent(QUrl.fromLocalFile(get_resource_path("music/water.wav"))))
@@ -78,7 +86,7 @@ class AudioPlayerThread(QThread):
 
     def stop_music(self, fade_duration=3000):
         self.is_playing = False
-        self._fade_volume(self.MAX_VOL, 0.0, pygame.mixer.stop, fade_duration)
+        self._fade_volume(self.CURRENT_VOLUME, 0.0, pygame.mixer.stop, fade_duration)
         self.off = True
 
     def set_background_volume(self, volume):
@@ -89,26 +97,48 @@ class AudioPlayerThread(QThread):
         self.is_playing = True
         self.off = False
         if not self.playlist and self.path_to_music:
-            self.playlist = [
-                os.path.join(self.path_to_music, f)
-                for f in os.listdir(self.path_to_music)
-                if os.path.splitext(f)[1].lower() in audio_extensions
-            ]
+            self.playlist = self.find_audio_files_recursive(self.path_to_music, audio_extensions)
         if self.playlist:
             self.play_next_track()
         self.background_sound_player.play()
         self.is_background_playing = True
 
+    def find_audio_files_recursive(self, directory, extensions):
+        """Рекурсивный поиск аудиофайлов с использованием pathlib"""
+        audio_files = []
+
+        try:
+            path = Path(directory)
+            # Рекурсивный поиск всех файлов с нужными расширениями
+            for ext in extensions:
+                audio_files.extend([
+                    str(file_path) for file_path in path.rglob(f"*{ext}")
+                ])
+        except Exception as e:
+            print(f"Ошибка при сканировании директории {directory}: {e}")
+
+        return audio_files
+
     def get_next_track(self):
         if self.playlist:
             if self.random:
-                next_song_index = random.randint(0, len(self.playlist) - 1)
-                while len(self.playlist) > 1 and self.playlist[next_song_index] == self.current_song:
-                    next_song_index = random.randint(0, len(self.playlist) - 1)
-                return self.playlist[next_song_index]
+                return self.get_random_song()
             else:
                 return self.playlist[
                     (self.playlist.index(self.current_song) + 1) % len(self.playlist) if not self.is_first_play else 0]
+
+    def get_random_song(self):
+        if self.playlist:
+            if len(self.playlist) <= 1:
+                return self.playlist[0]
+            # Ищем в плейлисте песню, которой еще не было
+            available_songs = [song for song in self.playlist if song not in self.history]
+            # Если все песни были в истории - берем любую
+            if not available_songs:
+                available_songs = self.playlist
+            # Выбираем случайную из доступных
+            return random.choice(available_songs)
+
 
     def play_previous_track(self):
         if self.is_playing and self.history:
@@ -178,7 +208,7 @@ class AudioPlayerThread(QThread):
         pygame.mixer.music.load(song)
         pygame.mixer.music.play()
         pygame.mixer.music.set_volume(0.0)
-        self._fade_volume(0.0, self.MAX_VOL)
+        self._fade_volume(0.0, self.CURRENT_VOLUME)
 
     def print_history(self):
         """Цветной вывод истории"""
@@ -227,11 +257,11 @@ class AudioPlayerThread(QThread):
             else:
                 if self.is_playing:
                     self.is_playing = False
-                    self._fade_volume(self.MAX_VOL, 0.0, pygame.mixer.music.pause)
+                    self._fade_volume(self.CURRENT_VOLUME, 0.0, pygame.mixer.music.pause)
                 else:
                     self.is_playing = True
                     pygame.mixer.music.unpause()
-                    self._fade_volume(0.0, self.MAX_VOL)
+                    self._fade_volume(0.0, self.CURRENT_VOLUME)
 
         if self.is_background_playing:
             self.background_sound_player.pause()

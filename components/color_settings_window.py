@@ -12,7 +12,7 @@ class ColorSettingsWidget(QWidget):
         super().__init__(root_window)
         self.root_window = root_window
         self.setGeometry(
-            (self.mapToGlobal(color_scheme_button.pos()) - root_window.frameGeometry().topLeft()).x()+50,
+            (self.mapToGlobal(color_scheme_button.pos()) - root_window.frameGeometry().topLeft()).x() + 50,
             color_scheme_button.pos().y() + 170,
             170,
             250)
@@ -31,14 +31,13 @@ class ColorSettingsWidget(QWidget):
         self.first_color = first_color
         self.second_color = second_color
 
-        print()
 
         # КНОПКА НАСТРОЙКИ ПЕРВОГО ЦВЕТА
-        self.first_gradient_color_pick_button = self.create_color_button("Первый цвет", self.first_color,
+        self.first_gradient_color_pick_button = self.create_color_button(self.first_color,
                                                                          self.change_first_gradient_color)
         third_settings_vbox.addWidget(self.first_gradient_color_pick_button)
         # КНОПКА НАСТРОЙКИ ВТОРОГО ЦВЕТА
-        self.second_gradient_color_pick_button = self.create_color_button("Второй цвет", self.second_color,
+        self.second_gradient_color_pick_button = self.create_color_button(self.second_color,
                                                                           self.change_second_gradient_color)
         third_settings_vbox.addWidget(self.second_gradient_color_pick_button)
 
@@ -64,8 +63,8 @@ class ColorSettingsWidget(QWidget):
         self.on_color_change.emit(self.first_color, self.second_color)
         self.close()
 
-    def create_color_button(self, text, color, handler):
-        button = QPushButton(text)
+    def create_color_button(self, color, handler):
+        button = QPushButton()
         button.setFixedSize(120, 70)
         button.setStyleSheet(self.create_stylesheet(color))
         button.clicked.connect(handler)

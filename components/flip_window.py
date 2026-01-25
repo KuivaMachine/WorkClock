@@ -74,7 +74,7 @@ class MarqueeLabel(QLabel):
 
     def check_marquee_needed(self):
         """Проверяет, нужен ли эффект бегущей строки"""
-        if len(self.original_text) > 26:
+        if len(self.original_text) > 10:
             if not self.is_marquee_active:
                self.start_marquee()
         else:
@@ -94,7 +94,7 @@ class MarqueeLabel(QLabel):
 
     def update_text(self):
         """Обновляет текст для эффекта бегущей строки"""
-        if len(self.original_text) <= 26:
+        if len(self.original_text) <= 10:
             self.stop_marquee()
             return
 
@@ -109,7 +109,7 @@ class MarqueeLabel(QLabel):
         display_text = self.original_text[self.current_position:]
 
         # Обрезаем до максимальной длины
-        display_text = display_text[:26]
+        display_text = display_text[:25]
         super().setText(display_text)
 
 
@@ -173,7 +173,7 @@ class FlipCard(QWidget):
         self.history_layout = QVBoxLayout(self.back_widget)
         self.history_layout.setAlignment(Qt.AlignTop)
         self.history_layout.setSpacing(10)
-        self.history_layout.setContentsMargins(10, 40, 0, 20)
+        self.history_layout.setContentsMargins(5, 40, 15, 20)
         self.update_song_history("тут", self.song_list)
         self.history_layout.addStretch()
 
@@ -192,7 +192,7 @@ class FlipCard(QWidget):
                 song_text.setStyleSheet(f"""
                          QLabel{{
                             color: {self.font_color};
-                            font-weight: bold;
+                            font-weight: 500;
                             font-size: 20px;
                             font-family: 'Sans Serif';
                             border: none;
