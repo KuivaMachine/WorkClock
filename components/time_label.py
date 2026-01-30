@@ -11,19 +11,30 @@ class TimeLabel(QLabel):
         self.time_font = time_font
         self.setAlignment(Qt.AlignCenter)
         self.set_background_transparency(0.5)
-        font = QFont(time_font, 25)
-        font.setBold(True)
-        self.setFont(font)
-        self.font_list=[
-            "PT Mono",
-            "HYWenHei",
-            "Stengazeta",
-            "Ringus-Regular"
-        ]
+
+
+        # Словарь с оптимальными размерами шрифтов для разного количества символов
+        self.font_sizes = {
+            "PT Mono": {5: 25, 6: 21},
+            "HYWenHei": {5: 22, 6: 20},
+            "Stengazeta": {5: 28, 6: 28},
+            "Ringus-Regular": {5: 24, 6: 22}
+        }
+
+        self.font_list = list(self.font_sizes.keys())
         self.font_cycle = itertools.cycle(self.font_list)
+
+        # Синхронизируем цикл с текущим шрифтом
         current_font = next(self.font_cycle)
         while current_font != time_font:
             current_font = next(self.font_cycle)
+
+    def setText(self, text):
+        super().setText(text)
+        # Устанавливаем шрифт
+        font = QFont(self.time_font, self.font_sizes[self.time_font][len(text)])
+        font.setBold(True)
+        self.setFont(font)
 
     def set_background_transparency(self, value):
         """Значение должно быть от 0.0 до 1.0"""
@@ -42,9 +53,9 @@ class TimeLabel(QLabel):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.RightButton:
             next_font = next(self.font_cycle)
-            font = QFont(next_font, 25)
+            self.time_font = next_font
+            font = QFont(self.time_font, self.font_sizes[self.time_font][len(self.text())])
             font.setBold(True)
             self.setFont(font)
-            self.time_font = next_font
             self.fontChanged.emit()
         super().mousePressEvent(event)

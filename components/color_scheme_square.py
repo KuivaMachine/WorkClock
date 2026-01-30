@@ -49,6 +49,7 @@ class ColorSchemeSquare(QWidget):
                 else:
                     # нижний треугольник
                     self.change_gradient_color(False)
+        super().mouseReleaseEvent(event)
 
 
     def change_gradient_color(self, is_first=True):

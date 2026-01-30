@@ -106,14 +106,12 @@ class AudioPlayerThread(QThread):
         pygame.mixer.music.unload()
         self.playlist = []
         self.history = []
-        print(f"self.is_playing={self.play_button_on} now\n")
 
 
     def stop_music(self, fade_duration=3000):
         self.play_button_on = False
         self._fade_volume(self.CURRENT_VOLUME, 0.0, pygame.mixer.stop, fade_duration)
         self.off = True
-
 
 
     def play_music(self):
@@ -138,7 +136,6 @@ class AudioPlayerThread(QThread):
                 ])
         except Exception as e:
             print(f"Ошибка при сканировании директории {directory}: {e}")
-
         return audio_files
 
     def get_next_track(self):

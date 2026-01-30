@@ -10,11 +10,10 @@ class PickMusicFolderButton(QWidget):
     clicked = pyqtSignal()
     delete_clicked = pyqtSignal()
 
-    def __init__(self, root_window, text, hint_text):
+    def __init__(self, root_window, text):
         super().__init__()
         self.close_btn_hover = False
         self.hover = False
-        self.hint_text = hint_text
         self.root_window = root_window
         self.setFixedSize(250, 40)
         self.setMouseTracking(True)
@@ -54,7 +53,7 @@ class PickMusicFolderButton(QWidget):
 
 
     def enterEvent(self, e):
-        self.hint = HintWidget(self.root_window, self.hint_text)
+        self.hint = HintWidget(self.root_window, "Папка с музыкой")
         self.hint.show()
 
     def leaveEvent(self, e):

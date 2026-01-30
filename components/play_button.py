@@ -208,7 +208,6 @@ class PlayButton(QPushButton):
         self.current_volume += amount if delta > 0 else -amount
         self.current_volume = max(self.min_value, min(self.max_value, self.current_volume))
         self.volume_change.emit(self.current_volume)
-        print(self.current_volume)
 
     def update_volume_value(self, mouse_pos):
         """Обновляет значение слайдера на основе позиции мыши"""

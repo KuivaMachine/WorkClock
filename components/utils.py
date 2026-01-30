@@ -6,6 +6,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
+LOG_FILE_NAME="WorkClock - logs"
 
 def lighten_color_subtract(hex_color, amount=40):
     """
@@ -37,7 +38,7 @@ def log_error(path=os.path.join(os.path.expanduser("~"), "Desktop"), error="", m
     """Простой метод логирования ошибок"""
     try:
         # Путь к файлу на рабочем столе
-        log_file = os.path.join(path, "logs.txt")
+        log_file = os.path.join(path, LOG_FILE_NAME)
 
         # Создаем файл если не существует
         if not os.path.exists(log_file):
@@ -75,38 +76,75 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-# ЧИТАЕМ НАСТРОЙКИ ИЗ ПАПКИ APPDATA И СОЗДАЕМ, ЕСЛИ ИХ НЕТ
 def check_settings():
+    # Определяем пути
     appdata_dir = Path(os.getenv('APPDATA')) / "WorkClock"
     appdata_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = appdata_dir / "settings.json"
+
+    # Определяем стандартные настройки по умолчанию
+    default_settings = {
+        "x": "1500",
+        "y": "100",
+        "work_interval": "30",
+        "rest_interval": "5",
+        "music_path": "",
+        "random": False,
+        "background_color": "#333333",
+        "first_gradient_color": "#FB06AD",
+        "second_gradient_color": "#FF8C00",
+        "lock_window": True,
+        "background_transparency": "99",
+        "current_color_scheme": 1,
+        "volume": 50,
+        "scheme_1_first_color": "#ffd700",
+        "scheme_1_second_color": "#ff00a5",
+        "scheme_2_first_color": "#ffffff",
+        "scheme_2_second_color": "#ff3ea8",
+        "scheme_3_first_color": "#46ff35",
+        "scheme_3_second_color": "#053100",
+        "scheme_4_first_color": "#303030",
+        "scheme_4_second_color": "#000000",
+        "time_font": "PT Mono"
+    }
+
+    # Если файла нет - создаем с настройками по умолчанию
     if not file_path.exists():
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump({
-                "x": "1500",
-                "y": "100",
-                "work_interval": "30",
-                "rest_interval": "5",
-                "music_path": "",
-                "random": False,
-                "background_color": "#333333",
-                "first_gradient_color": "#FB06AD",
-                "second_gradient_color": "#FF8C00",
-                "lock_window": True,
-                "background_transparency": "99",
-                "current_color_scheme": 1,
-                "volume":50,
-                "scheme_1_first_color": "#ffd700",
-                "scheme_1_second_color": "#ff00a5",
-                "scheme_2_first_color": "#ffffff",
-                "scheme_2_second_color": "#ff3ea8",
-                "scheme_3_first_color": "#46ff35",
-                "scheme_3_second_color": "#053100",
-                "scheme_4_first_color": "#303030",
-                "scheme_4_second_color": "#000000",
-                "time_font": "PT Mono"
-            }, f, indent=4)
+            json.dump(default_settings, f, indent=4, ensure_ascii=False)
+
+    # Если файл существует - читаем и проверяем
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            existing_settings = json.load(f)
+
+        # Флаг для отслеживания изменений
+        settings_updated = False
+
+        # Проверяем каждый ключ из стандартных настроек
+        for key, default_value in default_settings.items():
+            if key not in existing_settings:
+                # Добавляем отсутствующий ключ со значением по умолчанию
+                existing_settings[key] = default_value
+                settings_updated = True
+                print(f"Добавлен отсутствующий ключ: {key} = {default_value}")
+
+        # Если были добавлены новые ключи - сохраняем обновленный файл
+        if settings_updated:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(existing_settings, f, indent=4, ensure_ascii=False)
+            print("Настройки обновлены - добавлены новые параметры")
+
+    except json.JSONDecodeError:
+        # Если файл поврежден, создаем новый
+        print("Файл настроек поврежден. Создаю новый...")
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(default_settings, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        log_error(error=str(e), method_prefix="check_settings")
+        print(f"Ошибка при чтении настроек: {e}")
+
 
 
 # ВОЗВРАЩАЕТ НАСТРОЙКИ ИЗ APPDATA

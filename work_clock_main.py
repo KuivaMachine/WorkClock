@@ -245,16 +245,16 @@ class ClockWindow(QMainWindow):
         first_settings_hbox.setSpacing(10)
 
         # ВВОД РАБОЧЕГО ПЕРИОДА
-        self.work_interval_widget = IntervalInputWidget(self, self.work_interval, "Рабочий интервал", "icons/work_white.svg")
+        self.work_interval_widget = IntervalInputWidget(self, self.work_interval, "Сколько работать", "icons/work_white.svg")
         self.work_interval_widget.textChanged.connect(lambda text: {
-            self.handle_text_input(text, self.work_interval_widget)
+            self.handle_work_text_input(text, self.work_interval_widget)
         })
         first_settings_hbox.addWidget(self.work_interval_widget)
 
         # ВВОД ПЕРИОДА ОТДЫХА
-        self.rest_interval_widget = IntervalInputWidget(self, self.rest_interval, "Интервал отдыха", "icons/rest_white.svg")
+        self.rest_interval_widget = IntervalInputWidget(self, self.rest_interval, "Сколько отдыхать", "icons/rest_white.svg")
         self.rest_interval_widget.textChanged.connect(lambda text: {
-            self.handle_text_input(text, self.rest_interval_widget)
+            self.handle_rest_text_input(text, self.rest_interval_widget)
         })
 
         first_settings_hbox.addWidget(self.rest_interval_widget)
@@ -340,10 +340,7 @@ class ClockWindow(QMainWindow):
 
         self.music_hbox = QHBoxLayout(self.music_widget)
         self.music_hbox.setContentsMargins(0, 0, 0, 0)
-        self.select_folder_button = PickMusicFolderButton(self,
-                                                          getPathString(self.settings['music_path']) if self.settings[
-                                                                                                            'music_path'] != '' else 'Музыка',
-                                                           "Папка с музыкой")
+        self.select_folder_button = PickMusicFolderButton(self,getPathString(self.settings['music_path']) if self.settings['music_path'] != '' else 'Музыка')
         self.select_folder_button.clicked.connect(self.select_folder)
         self.select_folder_button.delete_clicked.connect(lambda:{
             self.audio_player.set_music_off(),
@@ -392,8 +389,8 @@ class ClockWindow(QMainWindow):
         elif key_name == 'page down':
             self.audio_player.play_next_track()
 
-    def handle_text_input(self, text, field):
-        if len(text) < 4:
+    def handle_work_text_input(self, text, field):
+        if text.isdigit() and 999 >=int(text)>0:
             if len(text) == 3:
                 field.setStyle("""
                         QLineEdit{
@@ -416,9 +413,58 @@ class ClockWindow(QMainWindow):
                             font-family: 'PT Mono';
                             background-color: transparent;
                         }""")
+
             self.save_settings()
         else:
             field.setText("30")
+
+        if not self.is_rest_period:
+            new_work_interval = int(self.work_interval_widget.text()) * 60
+            if self.work_interval != new_work_interval:
+                self.work_interval = new_work_interval
+                self.time_slider.setRange(0, self.work_interval - 8)
+            self.time_slider.setValue(0)
+            self.set_remain_time(0)
+
+
+
+    def handle_rest_text_input(self, text, field):
+        if text.isdigit() and 999 >=int(text)>0:
+            if len(text) == 3:
+                field.setStyle("""
+                        QLineEdit{
+                            border: none;
+                            padding: 0px;
+                            color: #E6E6E6;
+                            font-size: 20px;
+                             font-weight: bold;
+                            font-family: 'PT Mono';
+                            background-color: transparent;
+                        }""")
+            if len(text) == 2:
+                field.setStyle("""
+                        QLineEdit{
+                            border: none;
+                            padding: 0px;
+                            color: #E6E6E6;
+                            font-size: 25px;
+                             font-weight: bold;
+                            font-family: 'PT Mono';
+                            background-color: transparent;
+                        }""")
+
+            self.save_settings()
+        else:
+            field.setText("5")
+
+        if self.is_rest_period:
+            new_rest_interval = int(self.rest_interval_widget.text()) * 60
+            if self.rest_interval != new_rest_interval:
+                self.rest_interval = new_rest_interval
+                self.time_slider.setRange(0, self.rest_interval - 8)
+            self.time_slider.setValue(0)
+            self.set_remain_time(0)
+
 
     def set_window_flags(self, state):
         self.lock_window = state
@@ -774,23 +820,6 @@ class ClockWindow(QMainWindow):
 
     def close_settings(self):
         """Закрывает настройки - скрываем нижнюю часть и уменьшаем контейнер"""
-        if not self.is_rest_period:
-            if self.work_interval_widget.text().isdigit() and int(self.work_interval_widget.text()) > 0 and int(
-                    self.work_interval_widget.text()) < 99:
-                new_work_interval = int(self.work_interval_widget.text()) * 60
-                if self.work_interval != new_work_interval:
-                    self.work_interval = new_work_interval
-                    self.time_slider.setRange(0, self.work_interval - 8)
-                    self.time_slider.setValue(self.work_interval - self.remaining_time)
-
-        if self.is_rest_period:
-            if self.rest_interval_widget.text().isdigit() and int(self.rest_interval_widget.text()) > 0 and int(
-                    self.rest_interval_widget.text()) < 99:
-                new_rest_interval = int(self.rest_interval_widget.text()) * 60
-                if self.rest_interval != new_rest_interval:
-                    self.rest_interval = new_rest_interval
-                    self.time_slider.setRange(0, self.rest_interval - 8)
-                    self.time_slider.setValue(self.rest_interval - self.remaining_time)
 
         self.flip_card.hide()
         self.open_button.show()
@@ -926,7 +955,7 @@ if __name__ == "__main__":
         app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         check_settings()
-        version = "2.0.7"
+        version = "2.0.8"
         window = ClockWindow(version)
         window.show()
         app.exec()
