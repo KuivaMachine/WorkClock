@@ -2,3 +2,4 @@ icons.cdr
 build
 dist
 .idea
+/resources/.env

@@ -203,7 +203,7 @@ class FlipCard(QWidget):
             else:
                 song_text.setStyleSheet("""
                                              QLabel{
-                                                color: #999999;
+                                                color: #FDFEF0;
                                                 font-size: 20px;
                                                 font-weight: light;
                                                 font-family: 'Sans Serif'; 

@@ -1,12 +1,21 @@
-import ctypes
 import json
 import os
 import sys
 import traceback
 from datetime import datetime
-from pathlib import Path
 
-LOG_FILE_NAME="FocusTimer - logs"
+from getpass import getuser
+from pathlib import Path
+import platform
+
+import psutil
+import requests
+from dotenv import load_dotenv
+from pyexpat.errors import messages
+from screeninfo import screeninfo
+
+LOG_FILE_NAME = "FocusTimer - logs"
+
 
 def lighten_color_subtract(hex_color, amount=40):
     """
@@ -76,7 +85,16 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def check_settings():
+def check_settings(version):
+    if hasattr(sys, '_MEIPASS'):
+        # Режим .exe
+        base_path = sys._MEIPASS
+    else:
+        # Режим локального запуска
+        base_path = Path(__file__).parent.parent
+    env_path = os.path.join(base_path, 'resources', '.env')
+    load_dotenv(env_path)
+
     # Определяем пути
     appdata_dir = Path(os.getenv('APPDATA')) / "FocusTimer"
     appdata_dir.mkdir(parents=True, exist_ok=True)
@@ -106,13 +124,18 @@ def check_settings():
         "scheme_3_second_color": "#053100",
         "scheme_4_first_color": "#303030",
         "scheme_4_second_color": "#000000",
-        "time_font": "PT Mono"
+        "time_font": "PT Mono",
+        "current_version": version,
+        "need_to_send": True,
     }
 
     # Если файла нет - создаем с настройками по умолчанию
     if not file_path.exists():
+        success = send_statistic("настройки записаны с нуля", os.getenv("apple"), os.getenv("kiwi"), version)
+        default_settings["need_to_send"] = False if success else True
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(default_settings, f, indent=4, ensure_ascii=False)
+        return
 
     # Если файл существует - читаем и проверяем
     try:
@@ -124,11 +147,24 @@ def check_settings():
 
         # Проверяем каждый ключ из стандартных настроек
         for key, default_value in default_settings.items():
+            # Проверяем текущий номер версии
+            if key == "current_version" and key in existing_settings and existing_settings[key] != version:
+                existing_settings[key] = version
+                success = send_statistic("установлена новая версия поверх старой", os.getenv("apple"), os.getenv("kiwi"), version)
+                existing_settings["need_to_send"] = False if success else True
+                settings_updated = True
+
             if key not in existing_settings:
                 # Добавляем отсутствующий ключ со значением по умолчанию
                 existing_settings[key] = default_value
                 settings_updated = True
                 print(f"Добавлен отсутствующий ключ: {key} = {default_value}")
+
+        # Проверяем, нужно ли отправить статистику
+        if existing_settings["need_to_send"]:
+            success = send_statistic("не было интернета (или ключа 'need_to_send')", os.getenv("apple"), os.getenv("kiwi"), version)
+            existing_settings["need_to_send"] = False if success else True
+            settings_updated = True
 
         # Если были добавлены новые ключи - сохраняем обновленный файл
         if settings_updated:
@@ -144,7 +180,6 @@ def check_settings():
     except Exception as e:
         log_error(error=str(e), method_prefix="check_settings")
         print(f"Ошибка при чтении настроек: {e}")
-
 
 
 # ВОЗВРАЩАЕТ НАСТРОЙКИ ИЗ APPDATA
@@ -172,3 +207,41 @@ def getPathString(folder_path):
 
 def check_exists(file_path):
     return file_path and os.path.exists(file_path)
+
+
+def send_statistic(message, apple, kiwi, version):
+    try:
+        # Основные данные
+        main_info = f"""
+        <b>🚀 Запущен FocusTimer v{version}</b>
+    
+        <b>📝 Событие:</b> {message}
+        <b>⏰ Время:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        <b>👤 Пользователь:</b> {getuser()}
+        <b>💻 Система:</b> {platform.system()} {platform.release()}
+        <b>👋 Имя ПК:</b> {platform.node()}
+        <b>⚙️ Архитектура:</b> {platform.processor()} / {platform.architecture()[0]}
+        <b>🧬 Ядра CPU:</b> {psutil.cpu_count(logical=False)}/{psutil.cpu_count(logical=True)}. Загружено - {psutil.cpu_percent(interval=0.1)}%
+        <b>💾 Память:</b> ОЗУ - {psutil.virtual_memory().total // (1024 ** 3)} GB, HARD - {psutil.disk_usage('/').free // (1024 ** 3)} свободно из {psutil.disk_usage('/').total // (1024 ** 3)}GB
+        <b>🖥️ Мониторы:</b> {(
+            f"{len(screeninfo.get_monitors())}шт ({screeninfo.get_monitors()[0].width}x{screeninfo.get_monitors()[0].height})"
+            if hasattr(screeninfo, 'get_monitors') and len(screeninfo.get_monitors()) > 0
+            else 'N/A'
+        )}
+        <b>🔋 Питание:</b> {(
+            f"{psutil.sensors_battery().percent}%{' 🔌' if psutil.sensors_battery().power_plugged else ' 🔋'}"
+            if hasattr(psutil, 'sensors_battery') and psutil.sensors_battery()
+            else '🔌'
+        )}
+            """
+        payload = {
+            "chat_id": kiwi,
+            "text": main_info,
+            "parse_mode": "HTML"
+        }
+
+        response = requests.post(apple, json=payload)
+        return response.status_code == 200
+    except Exception:
+        return False
+

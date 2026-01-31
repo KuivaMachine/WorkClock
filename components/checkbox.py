@@ -17,7 +17,7 @@ class Checkbox(QCheckBox):
         self.setStyleSheet("""
                     QCheckBox {
                         background-color: transparent;
-                        border: 2px solid white;
+                        border: 2px solid #FDFEF0;
                         border-radius: 14px;
                         padding-left: 6px; 
                     }
@@ -30,7 +30,7 @@ class Checkbox(QCheckBox):
                         
                     }
                     QCheckBox::indicator:checked {
-                        background-color:  white;
+                        background-color: #FDFEF0;
                         border-radius: 6px;
                         width: 12px;
                         height: 12px;

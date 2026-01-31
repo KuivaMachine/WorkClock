@@ -8,6 +8,7 @@ a = Analysis(
         ('components/*', 'components'),
         ('music/*', 'music'),
         ('resources/*', 'resources'),
+        ('resources/.env', 'resources'),
         ('resources/fonts/*', 'resources/fonts'),
         ('resources/icons/*', 'resources/icons'),
         ('resources/toucan/*', 'resources/toucan'),

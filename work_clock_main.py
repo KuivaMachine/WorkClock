@@ -23,7 +23,7 @@ from components.pick_music_folder_button import PickMusicFolderButton
 from components.slider import Slider
 from components.time_label import TimeLabel
 from components.toucan_button import ToucanButton
-from components.utils import getPathString, get_resource_path, check_settings, load_settings
+from components.utils import getPathString, get_resource_path, check_settings, load_settings, log_error
 from components.utils import lighten_color_subtract
 
 
@@ -86,6 +86,9 @@ class ClockWindow(QMainWindow):
         self.scheme_3_second_color = self.settings['scheme_3_second_color']
         self.scheme_4_first_color = self.settings['scheme_4_first_color']
         self.scheme_4_second_color = self.settings['scheme_4_second_color']
+
+        self.current_version = self.settings["current_version"]
+        self.need_to_send = self.settings["need_to_send"]
 
 
         self.color_schemes_list = {}
@@ -671,7 +674,9 @@ class ClockWindow(QMainWindow):
             "scheme_3_second_color": self.scheme_3_second_color,
             "scheme_4_first_color": self.scheme_4_first_color,
             "scheme_4_second_color": self.scheme_4_second_color,
-            "time_font": self.timer_label.get_time_font()
+            "time_font": self.timer_label.get_time_font(),
+            "current_version": self.current_version,
+            "need_to_send": self.need_to_send,
         }
         appdata = os.getenv('APPDATA')
         app_dir = Path(appdata) / "FocusTimer" / 'settings.json'
@@ -949,13 +954,14 @@ class ClockWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    version = "2.0.8"
+
     try:
         app = QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)
         app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-        check_settings()
-        version = "2.0.8"
+        check_settings(version)
         window = ClockWindow(version)
         window.show()
         app.exec()
