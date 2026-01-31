@@ -1,5 +1,5 @@
 <div align="center">
-  <h1><img width="26" height="26" src="https://github.com/KuivaMachine/FocusTimer/blob/master/resources/icon.ico"/> FOCUS TIMER </h1>
+  <h1><img width="26" height="26" src="https://raw.githubusercontent.com/KuivaMachine/FocusTimer/master/resources/icon.ico"/> FOCUS TIMER </h1>
 </div>
 
 **Таймер, который можно настроить под себя!**    
@@ -30,12 +30,12 @@ Focus Timer — это стильное настольное приложени�
   <tr>
     <td>
       <picture>
-        <img width="480"src="https://github.com/KuivaMachine/FocusTimer/blob/master/wrap_view.png"/>
+        <img width="480"src="https://raw.githubusercontent.com/KuivaMachine/FocusTimer/master/wrap_view.png"/>
       </picture>
     </td>
      <td>
       <picture>
-        <img width="480" src="https://github.com/KuivaMachine/FocusTimer/blob/master/deleting_view.png"/>
+        <img width="480" src="https://raw.githubusercontent.com/KuivaMachine/FocusTimer/master/deleting_view.png"/>
       </picture>
     </td>
   </tr>
@@ -56,7 +56,7 @@ Focus Timer — это стильное настольное приложени�
 - **5. Индикатор времени** → также отображает оставшееся время в виде цветной полосы.
   
 ### Развернутый вид (настройки открыты):
-<img width="380" src="https://github.com/KuivaMachine/FocusTimer/blob/master/open_view.png"/>
+<img width="380" src="https://raw.githubusercontent.com/KuivaMachine/FocusTimer/master/open_view.png"/>
 
  - **1. Окно ввода рабочего интервала** → здесь устанавливается интервал работы в минутах.
    - **Минимум** - 1 минута, **максимум** - 999. Изменения применяются сразу. По умолчанию - 30 минут.
@@ -86,7 +86,7 @@ Focus Timer — это стильное настольное приложени�
  - **10. Разворот окна настроек** → нажмите и потяните влево/вправо за стрелочки, чтобы перевернуть карточку настроек. На обратной стороне — список загруженных треков с указанием текущего.
 
 ### Меню в трее:
-<img width="480" src="https://github.com/KuivaMachine/FocusTimer/blob/master/trey.png"/>
+<img width="480" src="https://raw.githubusercontent.com/KuivaMachine/FocusTimer/master/trey.png"/>
 
 - Правый клик по иконке откроет меню с управлением:
 - **Пауза/Играть** - останавливает или воспроизводит таймер и плеер.
